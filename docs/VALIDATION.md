@@ -64,4 +64,4 @@ python3 scripts/run_skills.py daily --input outputs/offline-clean-input.json --s
 
 在全新电脑先按 README 重新采集/export，文件内容与哈希会变化，再按自己的快照筛选；不要求重新出现本轮新闻。模型若继续 429，保留 failed 回执后停止，不轮询、不换账号、不用 fixture 冒充实采。
 
-GitHub 提交与推送结果由最终交付报告记录；协调者仍需复核远端与教学适用性。本文件不宣称整个课程或所有平台验证完成。
+实现已提交并正常推送至 `https://github.com/xue160709/AgentOS_Lite` 的 main：`8d8f37be267faba532e645bbab06f05912a102db`；`git ls-remote origin refs/heads/main` 与本机 HEAD 核对一致。此后仅更新交付状态文档，最终文档提交由交付报告给出。协调者仍需复核远端与教学适用性；本文件不宣称整个课程或所有平台验证完成。
