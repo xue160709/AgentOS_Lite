@@ -1,0 +1,1 @@
+{"include": ["python", "sqlite", "agent", "rss", "automation", "workflow"], "exclude_hints": ["celebrity", "horoscope", "sports betting"]}

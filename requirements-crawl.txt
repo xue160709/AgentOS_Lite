@@ -1,0 +1,2 @@
+# Optional; standard-library pipeline needs no pip installation.
+crawl4ai==0.9.3

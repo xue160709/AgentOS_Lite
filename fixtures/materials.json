@@ -1,0 +1,21 @@
+[
+  {
+    "url": "https://example.org/workshop/sqlite",
+    "title": "SQLite collection workflow — fictional fixture",
+    "published": "2026-01-01T09:00:00Z",
+    "body": "SQLite lets a small application keep structured records in a local database. This fictional workshop compares saving a source URL, its observation time and a body hash before writing a report.\n\nThe exercise repeats the same import twice and checks that only one material exists. Failed extraction remains visible so the learner can retry the missing item without changing the original record.",
+    "scope": "fixture_full"
+  },
+  {
+    "url": "https://example.org/workshop/horoscope",
+    "title": "Celebrity horoscope — fictional fixture",
+    "body": "This fictional entertainment bulletin describes celebrity horoscope predictions and a paid astrology newsletter. It provides no software workflow, technical documentation or collection evidence.\n\nThe text deliberately supplies enough prose for the body quality gate. Its purpose is to demonstrate that syntactically valid source material can still be irrelevant to a library automation reader.",
+    "scope": "fixture_full"
+  },
+  {
+    "url": "https://example.org/workshop/unknown",
+    "title": "An unexpected change — fictional fixture",
+    "summary": "No full body supplied.",
+    "scope": "metadata_only"
+  }
+]

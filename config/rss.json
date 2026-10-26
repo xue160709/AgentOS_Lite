@@ -1,0 +1,6 @@
+{
+  "sources": [
+    {"id": "python-blog", "url": "https://blog.python.org/feeds/posts/default?alt=rss", "enabled": true, "limit": 2},
+    {"id": "hn-frontpage", "url": "https://hnrss.org/frontpage", "enabled": false, "limit": 2}
+  ]
+}
