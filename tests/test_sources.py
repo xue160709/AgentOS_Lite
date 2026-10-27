@@ -14,7 +14,7 @@ from lite import Store, export, canonical, dump
 from sources import source_configs, load_config, opencli_command, call_opencli, social_item, note_text
 from storage import PlatformStore, analysis_connection, processed_ids
 from skill_runner import run_stage, validate_scores
-from run_skills import context_hash
+from contracts import context_hash
 from collect import collect
 
 RULES={'include':[],'exclude_hints':[]}

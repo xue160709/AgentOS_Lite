@@ -1,24 +1,18 @@
 # 教学取材索引
 
-本文件供协调会话取材，不代表已拍摄或课程审稿通过。未新增教学 UI，未改课程母稿、配音或模板。所有终端/文件取材后仍应实际查看截图，避免暴露其他会话状态。
+所有操作在本项目完成，不依赖其他 AgentOS 仓库。context 是虚构示例，fixtures 是无网络测试输入；运行日志与原始页面不在 GitHub。
 
-| 讲解动作 | 可打开的文件或命令 | 实际证据及边界 |
+| 讲解动作 | 文件或命令 | 说明 |
 |---|---|---|
-| 决定关心什么 | `context/interests.md`、`disinterests.md`、`report.md` | 虚构图书馆读者；与原项目个人偏好无关 |
-| 修改来源与关键词 | `config/rss.json`、`keywords.json` | RSS JSON，关键词提示不代替语义判断 |
-| 手动加链接 | README 的 add → queue → status | SQLite 官方参考 URL 已真实入队、导入；队列与材料共用 URL 身份 |
-| 固定离线导入 | `data/offline-clean/receipts/`；`fixtures/materials.json` | 3 条虚构演练，重跑 duplicate=3；2 复用、1 待补，无网络 |
-| RSS 发现 | `data/public/raw/230fbf961b2071e3de2bc3dc1f9336f7f5d150ab95336a9c2e8914d1278bd269.xml` | Python 官方博客真实响应；重跑 new=0、duplicate=2、failed=0 |
-| OpenCLI 只读 | `data/public/raw/50354b1736c89498e05a0ab32c4c4e57852bff0a97c5f0051bf2f0370eb67bed.json` | HN top 公共适配器真实 2 条；不能代表 X、小红书或浏览器桥接验证 |
-| 正文获取与复用 | `data/public/library.sqlite` 的 attempts/body_versions | 最终 4 篇 Jina、1 篇自然质量降级后 Crawl4AI 成功；修正后 bodies 为 reused=5；提取覆盖未逐字核验 |
-| 浏览器降级 | `data/crawl-probe/library.sqlite`、receipts | Jina 故障为受控模拟；其后 Crawl4AI 真实读取 SQLite 官方页成功，不能说自然网络触发 |
-| 失败后恢复 | `tests/test_pipeline.py`，`test_failure_is_recoverable_and_not_zero_new` | 无网络受控故障和恢复测试；不伪装为真实服务故障 |
-| 查看数据库 | README 的 sqlite3 查询 | 可看材料、观测、正文版本、尝试、队列、运行、决策七张表 |
-| 模型真的读取 Skill | `runs/offline-filter/events.jsonl` / `read-evidence.json` | 已完成命令输出含 Skill 全文与三份 context 全文，不只是“我已读取”的自述 |
-| 模型筛选 | `runs/offline-filter/model.json`；`runs/public-filter/model.json` | 前者 1/1/1，后者 4 keep、1 exclude；有原文短引与限制 |
-| context 对照 | `fixtures/context-entertainment/`；`runs/context-alt-filter/model.json` | 同一原件的技术/娱乐决定反转；模糊标题仍 pending |
-| 写日报 | `runs/offline-daily/daily.md` | 真实模型生成，但输入是虚构材料；待补项进入缺口，无真实经历声称 |
-| 查看真实限流 | `runs/public-daily/receipt.json` 和 events | 真实 CLI 返回 429，该次未生成日报；有限重试结果见验证记录 |
-| 可分享样例 | `examples/` | 仅经检查的少量内容、输出与哈希索引，不上传大段网页/数据库/完整运行日志 |
+| 配置来源 | config/sources/rss.json、urls.json、opencli/*.json | 按类型/平台分开，enabled 控制启用 |
+| 定义读者偏好 | context/ 的四份 Markdown | profile、interests、disinterests、report 各司其职 |
+| 查看采集计划 | python3 scripts/collect.py --preview --out runs/demo/input.json | 不请求网络或模型 |
+| 实际采集 | python3 scripts/collect.py --out runs/demo/input.json | 代码获取正文、按平台入库、导出净化快照 |
+| 查看分库 | docs/STORAGE.md | 原文与模型结果分开，平台之间不混库 |
+| 筛选评分 | python3 scripts/filter.py --input runs/demo/input.json --out runs/demo/filter | 第一个 Skill，输出分数、结论、原文依据 |
+| 写日报 | python3 scripts/generate.py --input runs/demo/input.json --selection runs/demo/filter/model.json --out runs/demo/daily | 第二个 Skill，只用 keep 材料 |
+| 一次完整运行 | python3 scripts/daily.py | 依次采集、评分、写日报；手动运行不启用定时任务 |
+| 失败与恢复 | tests/test_pipeline.py、tests/test_sources.py | 引用/版本校验、失败保留、去重和日报失败不标完成 |
+| 离线演练 | fixtures/materials.json，README 中的 fixture/export 命令 | 不需要网络，不冒充真实新闻或模型输出 |
 
-S4 可围绕采集入口、状态保存、正文路线、去重与恢复展开；S5 可围绕 context、Skill、决策依据、日报结构、输入失效和语义审查展开。具体课程集数由协调会话根据实际画面决定，本实现不宣称 31 集已验证。
+实际网络/模型证据范围见 VALIDATION.md。取材时只打开本批次必要文件，避免展示其他会话或登录态。

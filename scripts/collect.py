@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 from lite import ROOT, acquire, dump, export, now, parse_feed, request, crawl, body_quality, canonical
 from sources import load_config, source_configs, opencli_command, call_opencli, social_item, note_text
 from storage import PlatformStore, processed_ids, context_directory, scoring_hash
-from run_skills import context_hash
+from contracts import context_hash
 
 
 def collect(home, sources, output, body_limit=10, crawl_python=None, context_dir=None):

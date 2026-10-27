@@ -44,3 +44,7 @@ playwright/.auth/
 .idea/
 .vscode/
 Thumbs.db
+
+# Retired frozen model outputs and an unused old comparison profile (kept locally).
+examples/
+fixtures/context-entertainment/

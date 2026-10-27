@@ -11,7 +11,7 @@ import io
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import daily
 from lite import ROOT, digest, Store, acquire, canonical, export, parse_feed, prefilter, quality
-from run_skills import context_hash, validate_filter, validate_daily, validate_selection_binding, trace_reads, build_codex_command
+from contracts import context_hash, validate_filter, validate_daily, validate_selection_binding, trace_reads, build_codex_command
 
 RULES = {'include': ['sqlite'], 'exclude_hints': ['horoscope']}
 BODY = json.loads((ROOT / 'fixtures/materials.json').read_text())[0]['body']

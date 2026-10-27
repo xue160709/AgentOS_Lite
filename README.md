@@ -70,6 +70,7 @@ scripts/
   filter.py                      CLI 筛选评分入口
   generate.py                    CLI 日报入口（要求筛选清单）
   skill_runner.py                两阶段共用 CLI 调用与校验
+  contracts.py                   输出契约、版本绑定与引用校验
   storage.py                     分库存储与分析记录
   daily.py                       组合入口，供定时任务调用
   sources.py                     配置读取与只读 OpenCLI 适配
@@ -84,7 +85,7 @@ reports/                         完整流程的快照、日志和日报，不�
 data/                            SQLite 与按哈希保存的原件，不提交
 ```
 
-`docs/filter-workflow.md` 与 `docs/daily-workflow.md` 分别是两种 CLI 共用的筛选评分、日报写作规则。`tests/` 与 `fixtures/` 只用于开发检查和离线演练，不是日常业务步骤。`run_skills.py` 保留为旧 Codex 演练入口；新的默认流程使用 filter.py 和 generate.py 两次独立调用。
+`docs/filter-workflow.md` 与 `docs/daily-workflow.md` 分别是两种 CLI 共用的筛选评分、日报写作规则。`tests/` 与 `fixtures/` 只用于开发检查和离线演练，不是日常业务步骤。日常使用 collect.py、filter.py、generate.py，或直接运行组合入口 daily.py；不再提供旧版 run_skills.py 执行入口。
 
 ## 1. 修改公开配置与偏好
 
@@ -213,7 +214,7 @@ python3 scripts/lite.py --home data/classroom fixture
 python3 scripts/lite.py --home data/classroom export --out outputs/classroom-input.json
 ```
 
-离线 fixture 是虚构材料，不冒充真实采集，也不生成伪造模型结果。原有双阶段演练和服务失败的历史证据保留在 [验证记录](docs/VALIDATION.md)、[教学素材](docs/MATERIALS.md)、[来源与参考](docs/REFERENCE.md)。
+离线 fixture 是虚构材料，不冒充真实采集，也不生成伪造模型结果。当前验证范围见 [验证记录](docs/VALIDATION.md)，教学动作见 [教学素材](docs/MATERIALS.md)，参考来源见 [来源与参考](docs/REFERENCE.md)。早期冻结的模型输出与历史运行证据不再随源码分发，已有本机文件保留，Git 历史也可回查。
 
 ## 配置自己的 Crawl4AI 后备
 

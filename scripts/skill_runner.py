@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 from lite import ROOT, digest, dump, now
-from run_skills import (context_hash, schema_for, validate_filter, validate_daily,
+from contracts import (context_hash, schema_for, validate_filter, validate_daily,
                         validate_selection_binding, build_codex_command)
 from sources import load_config
 from storage import context_directory, save_analysis
