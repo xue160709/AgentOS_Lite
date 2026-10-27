@@ -1,0 +1,12 @@
+{
+  "sources": [
+    {
+      "id": "hn-top",
+      "enabled": false,
+      "site": "hackernews",
+      "command": "top",
+      "limit": 2,
+      "options": {}
+    }
+  ]
+}

@@ -45,6 +45,14 @@ def canonical(url):
     query = [(k, v) for k, v in parse_qsl(p.query, keep_blank_values=True)
              if not k.lower().startswith('utm_') and k.lower() not in ('fbclid', 'gclid')]
     host = p.hostname.lower()
+    if host == 'www.xiaohongshu.com' or host == 'xiaohongshu.com':
+        # Search returns a different temporary signature on each run; it is not note identity.
+        query = [(k, v) for k, v in query if not k.lower().startswith('xsec_')]
+        match = re.fullmatch(r'/(?:search_result|explore|discovery/item)/([0-9a-fA-F]{24})/?', p.path)
+        if match:
+            # All three public URL forms identify the same note.
+            p = p._replace(path='/explore/' + match.group(1).lower())
+            host = 'www.xiaohongshu.com'
     if ':' in host:
         host = '[' + host + ']'
     # Preserve protocol and path semantics; discard fragments and tracking only.
@@ -118,6 +126,15 @@ def quality(text):
     return True, 'heuristic pass; extraction coverage not independently verified'
 
 
+def body_quality(text, scope):
+    if scope == 'platform_text_unverified':
+        # Posts are often shorter than articles. This is platform text, not a full-page claim.
+        return (len(text.strip()) >= 20 and not any(x in text.lower() for x in
+                ('access denied', 'captcha', 'sign in to continue', 'verify you are human')),
+                'platform text; completeness not independently verified')
+    return quality(text)
+
+
 def prefilter(title, body, rules):
     hay = (title + '\n' + body).casefold()
     hits = [w for w in rules['include'] if w.casefold() in hay]
@@ -157,14 +174,15 @@ def parse_feed(raw, base):
 
 
 class Store:
-    def __init__(self, home):
+    def __init__(self, home, db_name='library.sqlite', schema='schema.sql'):
         self.last_status = 'ok'
         self.home = Path(home).resolve()
         self.home.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(self.home / 'library.sqlite')
+        self.db_path = self.home / db_name
+        self.db = sqlite3.connect(self.db_path)
         self.db.row_factory = sqlite3.Row
         self.db.execute('PRAGMA foreign_keys=ON')
-        self.db.executescript((ROOT / 'scripts/schema.sql').read_text())
+        self.db.executescript((ROOT / 'scripts' / schema).read_text())
 
     def raw(self, content, suffix='txt'):
         raw = content if isinstance(content, bytes) else content.encode()
@@ -179,7 +197,7 @@ class Store:
 
     def item(self, item, source, raw_path, rules):
         url = canonical(item['url'])
-        mid = digest(url)[:20]
+        mid = digest(item.get('identity_key') or url)[:20]
         fresh = self.db.execute('SELECT 1 FROM materials WHERE id=?', (mid,)).fetchone() is None
         self.db.execute('INSERT OR IGNORE INTO materials(id,url,title,published,discovered_at,updated_at,prefilter) '
                         'VALUES(?,?,?,?,?,?,?)', (mid, url, item['title'], item.get('published'), now(), now(),
@@ -188,9 +206,10 @@ class Store:
                         'VALUES(?,?,?,?,?,?)', (mid, source, item.get('source_item_id'), now(), item.get('published'), raw_path))
         # Only declared full content is eligible for reuse, never RSS description or HN title.
         existing = self.db.execute('SELECT * FROM materials WHERE id=?', (mid,)).fetchone()
-        if (not self.cached(existing) and item.get('scope') in ('fixture_full', 'feed_claimed_full')
-                and item.get('body') and quality(item['body'])[0]):
-            self.body(mid, item['body'], 'feed' if source != 'fixture' else 'fixture', item['scope'])
+        if (not self.cached(existing) and item.get('scope') in ('fixture_full', 'feed_claimed_full', 'platform_text_unverified')
+                and item.get('body') and body_quality(item['body'], item['scope'])[0]):
+            method = 'opencli' if item['scope'] == 'platform_text_unverified' else 'fixture' if source == 'fixture' else 'feed'
+            self.body(mid, item['body'], method, item['scope'])
         self.db.commit()
         return mid, fresh
 
@@ -198,7 +217,7 @@ class Store:
         if row['body_status'] != 'ok' or not row['body_path']:
             return False
         p = self.home / row['body_path']
-        return p.is_file() and digest(p.read_bytes()) == row['body_sha256'] and quality(p.read_text())[0]
+        return p.is_file() and digest(p.read_bytes()) == row['body_sha256'] and body_quality(p.read_text(), row['body_scope'])[0]
 
     def body(self, mid, text, method, scope):
         sha = digest(text)
@@ -295,10 +314,11 @@ def main():
     p = subs.add_parser('fixture'); p.add_argument('--file', default=str(ROOT / 'fixtures/materials.json'))
     p = subs.add_parser('add'); p.add_argument('url'); p.add_argument('--title', default='(manual URL; title unverified)')
     subs.add_parser('queue')
-    p = subs.add_parser('rss'); p.add_argument('--config', default=str(ROOT / 'config/rss.json'))
+    p = subs.add_parser('rss'); p.add_argument('--config', default=str(ROOT / 'config/sources/rss.json'))
     p = subs.add_parser('opencli'); p.add_argument('--feed', choices=['top', 'newest'], default='top'); p.add_argument('--limit', type=int, default=2)
     p = subs.add_parser('bodies'); p.add_argument('--limit', type=int, default=3); p.add_argument('--id'); p.add_argument('--retry', action='store_true'); p.add_argument('--refresh', action='store_true')
     p.add_argument('--crawl-python', default=sys.executable)
+    p.add_argument('--pending', action='store_true', help='Only acquire missing, failed or invalid cached bodies')
     p.add_argument('--offline', action='store_true', help='Cache checks only; missing text stays pending without network')
     p = subs.add_parser('export'); p.add_argument('--out', required=True)
     subs.add_parser('status')
@@ -392,6 +412,8 @@ def main():
             rows = [x for x in rows if x['id'] == args.id]
             if not rows:
                 parser.error('Unknown material ID')
+        if args.pending:
+            rows = [x for x in rows if not store.cached(x)]
         if args.retry:
             rows = [x for x in rows if x['body_status'] in ('failed', 'refresh_failed')]
         fetchers = [('jina', lambda url: request('https://r.jina.ai/' + url).decode('utf-8')),

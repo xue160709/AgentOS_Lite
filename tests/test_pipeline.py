@@ -2,11 +2,16 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+import subprocess
 import unittest
+from unittest import mock
+import contextlib
+import io
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+import daily
 from lite import ROOT, digest, Store, acquire, canonical, export, parse_feed, prefilter, quality
-from run_skills import context_hash, validate_filter, validate_daily, validate_selection_binding, trace_reads
+from run_skills import context_hash, validate_filter, validate_daily, validate_selection_binding, trace_reads, build_codex_command
 
 RULES = {'include': ['sqlite'], 'exclude_hints': ['horoscope']}
 BODY = json.loads((ROOT / 'fixtures/materials.json').read_text())[0]['body']
@@ -158,6 +163,47 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaises(ValueError): trace_reads(trace,skill,ctx)
         trace.write_text(json.dumps({'type':'item.completed','item':{'type':'command_execution','command':'cat SKILL.md ctx/a.md','aggregated_output':'actual skill instructions\nfictional preference','exit_code':0}})+'\n')
         self.assertTrue(trace_reads(trace,skill,ctx)['skill_content_observed'])
+
+    def test_model_override_is_only_a_subprocess_argument(self):
+        default=build_codex_command('schema.json','out.json','prompt')
+        self.assertNotIn('--model',default)
+        self.assertNotIn('-c',default)
+        custom=build_codex_command('schema.json','out.json','prompt','ccs-deepseek/deepseek-flash','low')
+        self.assertEqual(custom[custom.index('--model')+1],'ccs-deepseek/deepseek-flash')
+        self.assertEqual(custom[custom.index('-c')+1],'model_reasoning_effort="low"')
+        self.assertEqual(custom[-1],'prompt')
+
+    def test_daily_preview_never_starts_collection_or_models(self):
+        with mock.patch.object(daily, 'ROOT', Path(self.temp.name)), mock.patch.object(sys, 'argv', ['daily.py','--preview']), mock.patch('daily.subprocess.run') as run, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(daily.main(), 0)
+        run.assert_not_called()
+        self.assertFalse((Path(self.temp.name)/'reports').exists())
+
+    def test_daily_collection_failure_stops_before_model_calls(self):
+        with mock.patch.object(daily, 'ROOT', Path(self.temp.name)), mock.patch.object(sys, 'argv', ['daily.py']), mock.patch('daily.subprocess.run') as run, contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            run.return_value.returncode=1
+            self.assertEqual(daily.main(), 1)
+        self.assertEqual(run.call_count, 1)
+        self.assertIn('collect.py', run.call_args.args[0][1])
+
+    def test_daily_collects_then_generates_from_same_snapshot(self):
+        with mock.patch.object(daily, 'ROOT', Path(self.temp.name)), mock.patch.object(sys, 'argv', ['daily.py']), mock.patch('daily.subprocess.run') as run, contextlib.redirect_stdout(io.StringIO()):
+            run.return_value.returncode=0
+            self.assertEqual(daily.main(), 0)
+        commands=[call.args[0] for call in run.call_args_list]
+        self.assertEqual(len(commands), 3)
+        self.assertIn('collect.py', commands[0][1])
+        self.assertIn('filter.py', commands[1][1])
+        self.assertIn('generate.py', commands[2][1])
+        self.assertEqual(commands[0][commands[0].index('--out')+1], commands[1][commands[1].index('--input')+1])
+        self.assertEqual(commands[1][commands[1].index('--out')+1]+'/model.json', commands[2][commands[2].index('--selection')+1])
+
+    def test_partial_collection_generates_report_but_keeps_partial_exit(self):
+        def partial(command, **kwargs):
+            return subprocess.CompletedProcess(command, 2 if 'collect.py' in command[1] else 0)
+        with mock.patch.object(daily, 'ROOT', Path(self.temp.name)), mock.patch.object(sys, 'argv', ['daily.py']), mock.patch('daily.subprocess.run', side_effect=partial) as run, contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(daily.main(), 2)
+        self.assertEqual(run.call_count, 3)
 
     def test_url_identity(self):
         self.assertEqual(canonical('https://EXAMPLE.org/a?x=2&utm_medium=rss#f'), 'https://example.org/a?x=2')

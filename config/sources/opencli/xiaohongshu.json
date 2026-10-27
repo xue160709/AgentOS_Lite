@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {
+      "id": "xhs-python",
+      "enabled": true,
+      "site": "xiaohongshu",
+      "command": "search",
+      "query": "Python 自动化",
+      "limit": 2,
+      "options": {
+        "sort": "latest",
+        "publish-time": "week"
+      }
+    }
+  ]
+}

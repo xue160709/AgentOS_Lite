@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "id": "sqlite-guide",
+      "enabled": true,
+      "url": "https://www.sqlite.org/whentouse.html",
+      "title": "Appropriate Uses For SQLite"
+    }
+  ]
+}

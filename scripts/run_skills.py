@@ -97,6 +97,16 @@ def validate_selection_binding(selection_path, input_path):
         raise ValueError('Selection file changed after validation')
 
 
+def build_codex_command(schema_path, final, prompt, model=None, reasoning_effort=None):
+    command = ['codex', 'exec', '-C', str(ROOT), '--sandbox', 'read-only', '--json',
+               '--output-schema', str(schema_path), '-o', str(final)]
+    if model:
+        command.extend(['--model', model])
+    if reasoning_effort:
+        command.extend(['-c', f'model_reasoning_effort="{reasoning_effort}"'])
+    return command + [prompt]
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('mode', choices=['filter', 'daily'])
@@ -105,6 +115,8 @@ def main():
     p.add_argument('--context', default=str(ROOT / 'context'))
     p.add_argument('--out', required=True, help='New directory; never overwrites an existing model run')
     p.add_argument('--timeout', type=int, default=600)
+    p.add_argument('--model', help='Per-run exact model ID; does not change global configuration')
+    p.add_argument('--reasoning-effort', choices=['none','minimal','low','medium','high','xhigh','max','ultra'], help='Optional per-run effort supported by the selected model')
     args = p.parse_args()
     output = Path(args.out).resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -133,16 +145,16 @@ def main():
         prompt += f'Read validated selection {Path(args.selection).resolve()}. '
     (output / 'prompt.txt').write_text(prompt + '\n')
     final = output / 'model.json'
-    command = ['codex', 'exec', '-C', str(ROOT), '--sandbox', 'read-only', '--json',
-               '--output-schema', str(schema_path), '-o', str(final), prompt]
+    command = build_codex_command(schema_path, final, prompt, args.model, args.reasoning_effort)
     receipt = {'started_at': now(), 'mode': args.mode, 'skill': str(skill_path.relative_to(ROOT)),
                'skill_sha256': digest(skill_path.read_bytes()), 'input_sha256': digest(input_bytes),
                'context_sha256': ctx, 'context_files': hashes, 'argv': command[:-1] + ['<see prompt.txt>'],
+               'requested_model': args.model, 'requested_reasoning_effort': args.reasoning_effort,
                'status': 'running', 'evidence_kind': 'actual_codex_cli_model_run'}
     dump(output / 'receipt.json', receipt)
     try:
         with (output / 'events.jsonl').open('w') as stdout, (output / 'stderr.log').open('w') as stderr:
-            proc = subprocess.run(command, cwd=ROOT, stdout=stdout, stderr=stderr, text=True, timeout=args.timeout)
+            proc = subprocess.run(command, cwd=ROOT, stdout=stdout, stderr=stderr, text=True, timeout=args.timeout, stdin=subprocess.DEVNULL)
         receipt['returncode'] = proc.returncode
         if proc.returncode or not final.exists():
             raise RuntimeError('Codex did not return a successful final JSON; inspect local events/stderr. No auth change attempted.')

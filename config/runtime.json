@@ -1,0 +1,7 @@
+{
+  "engine": "claude",
+  "model": null,
+  "timeout": 600,
+  "body_limit": 10,
+  "crawl_python": null
+}

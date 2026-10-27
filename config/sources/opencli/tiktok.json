@@ -1,0 +1,13 @@
+{
+  "sources": [
+    {
+      "id": "tiktok-python",
+      "enabled": false,
+      "site": "tiktok",
+      "command": "search",
+      "query": "Python automation",
+      "limit": 2,
+      "options": {}
+    }
+  ]
+}
